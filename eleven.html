@@ -152,10 +152,17 @@
         .clock-digit {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
-            font-size: 5rem;
+            font-size: 3.5rem;
+            /* Smaller for mobile */
             line-height: 1;
             letter-spacing: -2px;
             transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+
+        @media (min-width: 768px) {
+            .clock-digit {
+                font-size: 5rem;
+            }
         }
 
         body.horror-mode .clock-digit {
@@ -164,8 +171,9 @@
 
         /* Analog Clock Styling */
         .analog-clock-container {
-            width: 280px;
-            height: 280px;
+            width: 240px;
+            /* Smaller for mobile */
+            height: 240px;
             border-radius: 50%;
             background: var(--clock-face);
             box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.1), 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -175,6 +183,13 @@
             align-items: center;
             border: 8px solid var(--clock-border);
             transition: all 1.5s ease;
+        }
+
+        @media (min-width: 768px) {
+            .analog-clock-container {
+                width: 280px;
+                height: 280px;
+            }
         }
 
         .clock-center {
@@ -237,8 +252,15 @@
             top: 10px;
             left: 50%;
             margin-left: -2px;
-            transform-origin: 2px 130px;
+            transform-origin: 2px 110px;
+            /* Adjusted for smaller mobile clock */
             transition: background 1.5s ease;
+        }
+
+        @media (min-width: 768px) {
+            .clock-mark {
+                transform-origin: 2px 130px;
+            }
         }
 
         body.horror-mode .clock-mark {
@@ -361,7 +383,7 @@
                 <span id="star-icon">🌟</span> <span id="found-count" class="font-bold text-lg">0</span> Found
             </div>
             <button id="auto-btn"
-                class="bg-slate-800 text-white px-5 py-2 rounded-2xl font-medium hover:scale-105 transition-all shadow-lg border border-transparent">
+                class="bg-slate-800 text-white px-5 py-2 rounded-2xl font-medium hover:scale-105 transition-all shadow-lg border border-transparent whitespace-nowrap">
                 Play Realtime
             </button>
         </div>
