@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target 11: The Chrono-Logic Clock</title>
+    <!-- GSAP Core & Draggable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* Default "Soothing" Theme */
+        :root {
+            --bg-soothing: #FFEEAD;
+            --primary-joy: #A2D2FF;
+            --accent-radiant: #D4D0FE;
+            --hero-dark: #2D3436;
+            --orb-1: #A2D2FF;
+            --orb-2: #D4D0FE;
+            --orb-3: #FFD6A5;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --text-glow: none;
+            --clock-face: rgba(255, 255, 255, 0.8);
+            --clock-border: white;
+            --success-color: #3B82F6;
+        }
+
+        /* "Cinematic Horror" Theme activated on 11 */
+        body.horror-mode {
+            --bg-soothing: #0a0505;
+            --primary-joy: #660000;
+            --accent-radiant: #2a0000;
+            --hero-dark: #ff3333;
+            --orb-1: #4a0000;
+            --orb-2: #220000;
+            --orb-3: #110000;
+            --glass-bg: rgba(20, 0, 0, 0.6);
+            --glass-border: rgba(255, 0, 0, 0.2);
+            --text-glow: 0 0 20px rgba(255, 0, 0, 0.8);
+            --clock-face: rgba(10, 0, 0, 0.9);
+            --clock-border: #4a0000;
+            --success-color: #ff0000;
+        }
+
+        body {
+            background-color: var(--bg-soothing);
+            font-family: 'Space+Grotesk', sans-serif;
+            color: var(--hero-dark);
+            overflow-x: hidden;
+            margin: 0;
+            transition: background-color 1.5s cubic-bezier(0.4, 0, 0.2, 1), color 1.5s ease;
+        }
+
+        /* Ambient Cinematic Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background: var(--bg-soothing);
+            transition: background 1.5s ease;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: float 20s infinite alternate ease-in-out;
+            transition: background 2s ease;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--orb-1);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--orb-2);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: var(--orb-3);
+            top: 40%;
+            left: 60%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(50px, 50px) scale(1.1);
+            }
+        }
+
+        /* Vignette overlay for horror mode */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, transparent 30%, rgba(0, 0, 0, 0.95) 100%);
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        body.horror-mode .vignette {
+            opacity: 1;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 1.5s ease;
+        }
+
+        /* Clock Typography */
+        .clock-digit {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 5rem;
+            line-height: 1;
+            letter-spacing: -2px;
+            transition: color 0.5s ease, text-shadow 0.5s ease;
+        }
+
+        body.horror-mode .clock-digit {
+            text-shadow: var(--text-glow);
+        }
+
+        /* Analog Clock Styling */
+        .analog-clock-container {
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: var(--clock-face);
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.1), 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 8px solid var(--clock-border);
+            transition: all 1.5s ease;
+        }
+
+        .clock-center {
+            width: 16px;
+            height: 16px;
+            background: var(--hero-dark);
+            border-radius: 50%;
+            position: absolute;
+            z-index: 10;
+            transition: background 1.5s ease;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            border-radius: 10px;
+            z-index: 5;
+            transition: background 1.5s ease;
+        }
+
+        .hour-hand {
+            width: 8px;
+            height: 70px;
+            background: var(--hero-dark);
+            margin-left: -4px;
+        }
+
+        .minute-hand {
+            width: 6px;
+            height: 100px;
+            background: var(--success-color);
+            margin-left: -3px;
+            cursor: grab;
+        }
+
+        .minute-hand:active {
+            cursor: grabbing;
+        }
+
+        .minute-hitbox {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            width: 40px;
+            height: 120px;
+            margin-left: -20px;
+            transform-origin: bottom center;
+            z-index: 6;
+            cursor: grab;
+            background: transparent;
+        }
+
+        .clock-mark {
+            position: absolute;
+            width: 4px;
+            height: 12px;
+            background: rgba(120, 120, 120, 0.3);
+            top: 10px;
+            left: 50%;
+            margin-left: -2px;
+            transform-origin: 2px 130px;
+            transition: background 1.5s ease;
+        }
+
+        body.horror-mode .clock-mark {
+            background: rgba(255, 0, 0, 0.3);
+        }
+
+        /* Card Hover */
+        .discovery-card {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: default;
+        }
+
+        .discovery-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        body.horror-mode .discovery-card {
+            border-left-color: #ff0000 !important;
+        }
+
+        #logic-display {
+            transition: all 0.3s ease;
+        }
+
+        .logic-success {
+            color: var(--success-color) !important;
+            text-shadow: var(--text-glow);
+            transform: scale(1.05);
+        }
+
+        /* Glitch Effect for Horror Mode */
+        @keyframes glitch {
+            0% {
+                transform: translate(0)
+            }
+
+            20% {
+                transform: translate(-2px, 2px)
+            }
+
+            40% {
+                transform: translate(-2px, -2px)
+            }
+
+            60% {
+                transform: translate(2px, 2px)
+            }
+
+            80% {
+                transform: translate(2px, -2px)
+            }
+
+            100% {
+                transform: translate(0)
+            }
+        }
+
+        body.horror-mode .glitch-active {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+        }
+
+        /* Audio Visualizer Bar */
+        .audio-bar {
+            width: 3px;
+            height: 10px;
+            background: var(--hero-dark);
+            border-radius: 2px;
+            display: inline-block;
+            margin: 0 1px;
+            animation: bounce 1s infinite alternate ease-in-out;
+            transform-origin: bottom;
+            transition: background 1.5s ease;
+        }
+
+        @keyframes bounce {
+            0% {
+                transform: scaleY(0.5);
+            }
+
+            100% {
+                transform: scaleY(1.5);
+            }
+        }
+
+        .audio-paused .audio-bar {
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8 relative">
+
+    <div class="vignette"></div>
+
+    <!-- Cinematic Background -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center gap-4 mb-8 z-10">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Target <span
+                    class="text-blue-500 transition-colors duration-1000" id="title-11">11</span></h1>
+            <p class="opacity-70 text-sm font-medium">Ashkam Intelligent Studios | 12-Hour Chrono-Logic</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="audio-btn"
+                class="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-white/10 transition-colors audio-paused">
+                <div class="flex h-4 items-end">
+                    <div class="audio-bar" style="animation-delay: 0.1s"></div>
+                    <div class="audio-bar" style="animation-delay: 0.3s"></div>
+                    <div class="audio-bar" style="animation-delay: 0.2s"></div>
+                </div>
+                <span class="text-sm font-bold">Ambient Audio</span>
+            </button>
+            <div class="glass-panel px-4 py-2 font-medium flex items-center gap-2">
+                <span id="star-icon">🌟</span> <span id="found-count" class="font-bold text-lg">0</span> Found
+            </div>
+            <button id="auto-btn"
+                class="bg-slate-800 text-white px-5 py-2 rounded-2xl font-medium hover:scale-105 transition-all shadow-lg border border-transparent">
+                Play Realtime
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Arena -->
+    <main class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 z-10">
+
+        <!-- Interactive Clock Side -->
+        <div class="lg:col-span-5 flex flex-col items-center gap-6">
+            <div class="glass-panel w-full p-8 flex flex-col items-center relative">
+                <p class="text-sm font-bold uppercase tracking-widest opacity-50 mb-6">Drag to compose melody</p>
+
+                <!-- The Analog Clock -->
+                <div class="analog-clock-container" id="analog-clock">
+                    <div class="clock-center"></div>
+                    <div class="hand hour-hand" id="hour-hand"></div>
+                    <div class="hand minute-hand" id="minute-hand"></div>
+                    <div class="minute-hitbox" id="minute-hitbox"></div>
+                    <div id="clock-marks"></div>
+                </div>
+
+                <div
+                    class="mt-8 flex items-end justify-center gap-1 bg-white/20 backdrop-blur-md px-6 py-2 rounded-full border border-white/30 shadow-inner">
+                    <span id="h" class="clock-digit">09</span>
+                    <span class="clock-digit opacity-50 mb-2">:</span>
+                    <span id="m" class="clock-digit">02</span>
+                    <span id="ampm" class="text-xl font-bold ml-2 mb-3 opacity-70 tracking-widest">AM</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logic Analysis Side -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            <!-- Scanner Panel -->
+            <div class="glass-panel w-full p-8 min-h-[160px] flex flex-col justify-center items-center text-center relative overflow-hidden"
+                id="scanner-panel">
+                <div id="logic-display"
+                    class="text-2xl md:text-3xl font-medium text-slate-600 italic transition-colors">
+                    Awaiting logic interaction...
+                </div>
+                <div
+                    class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-30">
+                </div>
+            </div>
+
+            <!-- Discovery Tray -->
+            <div class="w-full">
+                <h2 class="text-lg font-bold mb-3 flex items-center gap-2 opacity-80">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 current-color" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                    The "11" Repository
+                </h2>
+                <div id="discovery-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <!-- Cards injected here -->
+                </div>
+                <div id="empty-state"
+                    class="text-center py-8 opacity-50 text-sm font-medium border-2 border-dashed border-current rounded-xl">
+                    Discover logic patterns to add them here.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Core Elements ---
+        const clockH = document.getElementById('h');
+        const clockM = document.getElementById('m');
+        const ampmDisplay = document.getElementById('ampm');
+        const logicDisplay = document.getElementById('logic-display');
+        const autoBtn = document.getElementById('auto-btn');
+        const discoveryGrid = document.getElementById('discovery-grid');
+        const foundCountDisplay = document.getElementById('found-count');
+        const emptyState = document.getElementById('empty-state');
+        const audioBtn = document.getElementById('audio-btn');
+        const title11 = document.getElementById('title-11');
+        const starIcon = document.getElementById('star-icon');
+
+        const hourHand = document.getElementById('hour-hand');
+        const minuteHand = document.getElementById('minute-hand');
+        const minuteHitbox = document.getElementById('minute-hitbox');
+
+        // --- State ---
+        let totalMinutes = 542; // Starts at 09:02 AM
+        let isRealtime = false;
+        let isHorrorMode = false;
+        let discoveredTimes = new Set();
+        let currentInterval = null;
+        let lastDraggableRotation = 0;
+
+        // --- Audio Engine (Web Audio API) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        let isAudioPlaying = false;
+        let droneOscillator, droneLFO, droneGain;
+
+        // Eerie Melodic Scale (Lydian / Minor hybrid for a mysterious music box feel)
+        const melodyScale = [261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16, 523.25];
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            if (!isAudioPlaying) {
+                // Base Drone Setup
+                droneOscillator = audioCtx.createOscillator();
+                droneOscillator.type = 'sine';
+                droneOscillator.frequency.value = 220; // A3 (Soothing)
+
+                droneLFO = audioCtx.createOscillator();
+                droneLFO.frequency.value = 0.1;
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 5;
+                droneLFO.connect(lfoGain);
+                lfoGain.connect(droneOscillator.frequency);
+
+                droneGain = audioCtx.createGain();
+                droneGain.gain.value = 0.05;
+
+                droneOscillator.connect(droneGain);
+                droneGain.connect(audioCtx.destination);
+
+                droneOscillator.start();
+                droneLFO.start();
+
+                isAudioPlaying = true;
+                audioBtn.classList.remove('audio-paused');
+            } else {
+                if (droneOscillator) {
+                    droneOscillator.stop();
+                    droneLFO.stop();
+                }
+                isAudioPlaying = false;
+                audioBtn.classList.add('audio-paused');
+            }
+        }
+
+        function playMelodyNote(minute) {
+            if (!isAudioPlaying || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            // Pick note from scale based on minute
+            const freq = melodyScale[minute % melodyScale.length];
+
+            osc.type = isHorrorMode ? 'sawtooth' : 'sine'; // Harsher in horror mode
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(isHorrorMode ? 0.05 : 0.1, audioCtx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        function triggerHorrorAudio(activate) {
+            if (!isAudioPlaying || !audioCtx || !droneOscillator) return;
+
+            if (activate) {
+                // Drop to terrifying sub-bass, increase LFO jitter
+                gsap.to(droneOscillator.frequency, { value: 55, duration: 1.5, ease: "power2.out" }); // Drop to A1
+                gsap.to(droneLFO.frequency, { value: 8, duration: 1.5 }); // Fast eerie wobble
+                gsap.to(droneGain.gain, { value: 0.15, duration: 1.5 }); // Make it louder
+
+                // Jump Scare Discordant Chime
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'square';
+                osc2.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // High C
+                osc2.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 1);
+
+                gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start();
+                osc2.stop(audioCtx.currentTime + 2);
+
+            } else {
+                // Return to soothing
+                gsap.to(droneOscillator.frequency, { value: 220, duration: 2, ease: "power2.inOut" });
+                gsap.to(droneLFO.frequency, { value: 0.1, duration: 2 });
+                gsap.to(droneGain.gain, { value: 0.05, duration: 2 });
+            }
+        }
+
+        audioBtn.addEventListener('click', initAudio);
+
+        // --- Clock UI Setup ---
+        const marksContainer = document.getElementById('clock-marks');
+        for (let i = 0; i < 12; i++) {
+            const mark = document.createElement('div');
+            mark.className = 'clock-mark';
+            mark.style.transform = `rotate(${i * 30}deg)`;
+            if (i % 3 === 0) {
+                mark.style.height = '16px';
+                mark.style.width = '6px';
+            }
+            marksContainer.appendChild(mark);
+        }
+
+        // --- 12-Hour Logic Engine ---
+        function findLogic(h, m) {
+            // h is strictly 1-12. m is 0-59.
+            const hStr = h.toString();
+            const mStr = m.toString().padStart(2, '0');
+
+            // Digits for operations (e.g. 11:15 -> [1, 1] and [1, 5])
+            const dH1 = h >= 10 ? Math.floor(h / 10) : 0;
+            const dH2 = h % 10;
+            const dM1 = Math.floor(m / 10);
+            const dM2 = m % 10;
+
+            const timeStr = `${h}:${mStr}`;
+
+            // 1. Pure Harmony
+            if (timeStr === "11:11" || timeStr === "1:11") {
+                return { text: `Temporal Resonance: ${timeStr}`, solved: true };
+            }
+
+            // 2. All Digits Sum
+            if (dH1 + dH2 + dM1 + dM2 === 11) {
+                let formula = h >= 10 ? `${dH1} + ${dH2} + ${dM1} + ${dM2}` : `${h} + ${dM1} + ${dM2}`;
+                return { text: `${formula} = 11`, solved: true };
+            }
+
+            // 3. Hour + Minute Total Sum
+            if (h + m === 11) return { text: `${h} + ${m} = 11`, solved: true };
+            if (h + dM1 + dM2 === 11) return { text: `${h} + ${dM1} + ${dM2} = 11`, solved: true };
+
+            // 4. Multiplication & Mixed (e.g., 5:21 -> 5 * 2 + 1 = 11)
+            if (h * dM1 + dM2 === 11) return { text: `${h} × ${dM1} + ${dM2} = 11`, solved: true };
+
+            if (h >= 10 && (dH1 * dH2 + dM1 + dM2 === 11)) {
+                return { text: `(${dH1} × ${dH2}) + ${dM1} + ${dM2} = 11`, solved: true };
+            }
+
+            // 5. Absolute Difference
+            if (Math.abs(h - m) === 11) return { text: `|${h} - ${m}| = 11`, solved: true };
+            if (Math.abs(h - (dM1 + dM2)) === 11) return { text: `|${h} - (${dM1} + ${dM2})| = 11`, solved: true };
+
+            // 6. Division
+            if (m !== 0 && h / m === 11) return { text: `${h} ÷ ${m} = 11`, solved: true };
+
+            return { text: "Scrubbing timeline for logic...", solved: false };
+        }
+
+        // --- Core Update Loop (12-Hour Enforced) ---
+        function updateTime(newTotalMinutes, userDriven = false) {
+            // Normalize total minutes to a 24-hour cycle (0 - 1439) for math logic
+            if (newTotalMinutes < 0) newTotalMinutes += 1440;
+            totalMinutes = newTotalMinutes % 1440;
+
+            const totalHours24 = Math.floor(totalMinutes / 60);
+            const minutes = Math.floor(totalMinutes % 60);
+
+            // Convert to 12 Hour Format
+            let displayHour = totalHours24 % 12;
+            if (displayHour === 0) displayHour = 12; // 0 becomes 12 AM/PM
+            const isPM = totalHours24 >= 12;
+
+            const hStr = displayHour.toString().padStart(2, '0');
+            const mStr = minutes.toString().padStart(2, '0');
+
+            // Update Digital UI
+            clockH.innerText = hStr;
+            clockM.innerText = mStr;
+            ampmDisplay.innerText = isPM ? "PM" : "AM";
+
+            // Update Analog UI
+            const minuteRotation = minutes * 6;
+            const hourRotation = (displayHour % 12) * 30 + (minutes * 0.5);
+
+            gsap.set(minuteHand, { rotation: minuteRotation });
+            gsap.set(minuteHitbox, { rotation: minuteRotation });
+            gsap.set(hourHand, { rotation: hourRotation });
+
+            // Evaluate Logic using ONLY 1-12
+            const logic = findLogic(displayHour, minutes);
+
+            if (logicDisplay.innerText !== logic.text) {
+                logicDisplay.innerText = logic.text;
+                if (userDriven) playMelodyNote(minutes); // Play melody note on minute change
+            }
+
+            // Handle Theme/Horror Shift
+            if (logic.solved && !isHorrorMode) {
+                activateHorrorMode();
+            } else if (!logic.solved && isHorrorMode) {
+                deactivateHorrorMode();
+            }
+
+            if (logic.solved) {
+                logicDisplay.classList.add('logic-success', 'glitch-active');
+                const timeKey = `${hStr}:${mStr} ${isPM ? 'PM' : 'AM'}`;
+
+                if (!discoveredTimes.has(timeKey)) {
+                    saveDiscovery(timeKey, logic.text, displayHour, minutes);
+                }
+            } else {
+                logicDisplay.classList.remove('logic-success', 'glitch-active');
+            }
+        }
+
+        function activateHorrorMode() {
+            isHorrorMode = true;
+            document.body.classList.add('horror-mode');
+            title11.classList.replace('text-blue-500', 'text-red-600');
+            starIcon.innerText = "🩸";
+            triggerHorrorAudio(true);
+
+            // Screen shake
+            gsap.to("body", {
+                x: () => Math.random() * 10 - 5,
+                y: () => Math.random() * 10 - 5,
+                duration: 0.1,
+                repeat: 5,
+                yoyo: true,
+                onComplete: () => gsap.set("body", { x: 0, y: 0 })
+            });
+        }
+
+        function deactivateHorrorMode() {
+            isHorrorMode = false;
+            document.body.classList.remove('horror-mode');
+            title11.classList.replace('text-red-600', 'text-blue-500');
+            starIcon.innerText = "🌟";
+            triggerHorrorAudio(false);
+        }
+
+        function saveDiscovery(time, formula, hours, minutes) {
+            discoveredTimes.add(time);
+            if (emptyState) emptyState.style.display = 'none';
+
+            fireAshConfetti();
+
+            const card = document.createElement('div');
+            card.className = 'discovery-card glass-panel p-4 flex flex-col justify-center border-l-4 border-l-blue-400';
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xl md:text-2xl font-bold tracking-tight">${time}</span>
+                    <div class="w-8 h-8 rounded-full border-2 border-current relative bg-transparent opacity-80">
+                        <div class="absolute bottom-1/2 left-1/2 w-[2px] h-[10px] bg-current origin-bottom" style="transform: translateX(-50%) rotate(${((hours % 12) * 30) + (minutes * 0.5)}deg)"></div>
+                        <div class="absolute bottom-1/2 left-1/2 w-[1px] h-[14px] bg-current origin-bottom" style="transform: translateX(-50%) rotate(${minutes * 6}deg)"></div>
+                    </div>
+                </div>
+                <div class="text-sm font-medium bg-black/10 px-2 py-1 rounded inline-block w-fit opacity-90">
+                    ${formula}
+                </div>
+            `;
+
+            discoveryGrid.prepend(card);
+            gsap.from(card, { y: 20, opacity: 0, scale: 0.9, duration: 0.6, ease: "back.out(1.5)" });
+
+            foundCountDisplay.innerText = discoveredTimes.size;
+        }
+
+        // Dark/Ash Confetti for Cinematic Horror feel
+        function fireAshConfetti() {
+            var duration = 2500;
+            var end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 7,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.8 },
+                    colors: ['#000000', '#4a0000', '#2d3436', '#660000'],
+                    gravity: 1.5,
+                    scalar: 0.8
+                });
+                confetti({
+                    particleCount: 7,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.8 },
+                    colors: ['#000000', '#4a0000', '#2d3436', '#660000'],
+                    gravity: 1.5,
+                    scalar: 0.8
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        // --- GSAP Draggable Setup ---
+        gsap.registerPlugin(Draggable);
+
+        Draggable.create(minuteHitbox, {
+            type: "rotation",
+            onPress: function () {
+                if (isRealtime) toggleRealtime();
+
+                // Auto-start audio context on first interaction if blocked
+                if (!audioCtx) initAudio();
+
+                lastDraggableRotation = this.rotation;
+            },
+            onDrag: function () {
+                let delta = this.rotation - lastDraggableRotation;
+
+                // Handle 360 wrap
+                if (delta > 180) delta -= 360;
+                else if (delta < -180) delta += 360;
+
+                let minutesChanged = delta / 6;
+
+                // Pass true for userDriven to play melody
+                updateTime(totalMinutes + minutesChanged, true);
+                lastDraggableRotation = this.rotation;
+            }
+        });
+
+        // --- Realtime loop ---
+        function toggleRealtime() {
+            isRealtime = !isRealtime;
+            if (isRealtime) {
+                if (!audioCtx) initAudio(); // Start audio
+                autoBtn.innerText = "Stop Realtime";
+                autoBtn.classList.replace('bg-slate-800', 'bg-blue-600');
+                if (isHorrorMode) autoBtn.classList.replace('bg-blue-600', 'bg-red-800');
+
+                currentInterval = setInterval(() => {
+                    const now = new Date();
+                    const newMins = now.getHours() * 60 + now.getMinutes();
+                    updateTime(newMins);
+                }, 1000);
+            } else {
+                autoBtn.innerText = "Play Realtime";
+                autoBtn.className = "bg-slate-800 text-white px-5 py-2 rounded-2xl font-medium hover:scale-105 transition-all shadow-lg border border-transparent";
+                clearInterval(currentInterval);
+            }
+        }
+
+        autoBtn.addEventListener('click', toggleRealtime);
+
+        // Initialize at 09:02 AM (9 + 0 + 2 = 11) to immediately show off the Horror Mode
+        updateTime(542);
+
+    </script>
+</body>
+
+</html>
